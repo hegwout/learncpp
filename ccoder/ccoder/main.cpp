@@ -3,10 +3,17 @@
 //  ccoder
 //
 //  Created by hegw on 16/4/26.
-//  Copyright © 2016年 hegw. All rights reserved.
+//  Copyright © 2016年 hegw. All rights reserved
+//
+//  NEED:
+//      boost_1_60_0
+//      mysql-connector-c++-1.1.7
+//      https://github.com/OlafvdSpek/ctemplate
+//      https://github.com/jbeder/yaml-cpp/
 //
 
 #include <iostream>
+#include <fstream>
 #include <sstream>
 #include <memory>
 #include <string>
@@ -23,18 +30,25 @@ using namespace std;
 #include <cppconn/exception.h>
 #include <cppconn/resultset.h>
 #include <cppconn/statement.h>
+#include <boost/date_time.hpp>
+#include <yaml-cpp/yaml.h>
+
 
 #define EXAMPLE_HOST "localhost"
 #define EXAMPLE_USER "root"
 #define EXAMPLE_PASS "mysql"
 #define EXAMPLE_DB "oro_abi"
 
+#define CODE_PATH "CODE"
+void GenerateEntity(const string);
+std::string YAMLParse( const std::string& name);
+
 int main(int argc, const char * argv[]) {
     string url(argc >= 2 ? argv[1] : EXAMPLE_HOST);
     const string user(argc >= 3 ? argv[2] : EXAMPLE_USER);
     const string pass(argc >= 4 ? argv[3] : EXAMPLE_PASS);
     const string database(argc >= 5 ? argv[4] : EXAMPLE_DB);
-    
+
     cout << endl;
     cout << "Connector/C++ standalone program example..." << endl;
     cout << endl;
@@ -53,6 +67,8 @@ int main(int argc, const char * argv[]) {
             cout << "\t... say it again, MySQL" << endl;
             cout << "\t....MySQL replies: " << res->getString(1) << endl;
         }
+        
+        GenerateEntity("Billing");
         
     } catch (sql::SQLException &e) {
         /*
@@ -76,4 +92,22 @@ int main(int argc, const char * argv[]) {
     cout << "... find more at http://www.mysql.com" << endl;
     cout << endl;
     return EXIT_SUCCESS;
+}
+void GenerateEntity(const string entity){
+    string file_name(entity);
+    file_name.append(".php");
+    
+    cout << file_name << endl;
+}
+
+std::string YAMLParse( const std::string& name){
+    try{
+        static YAML::Node config;
+        if( !config )
+            config = YAML::LoadFile("config.yaml");
+        return config[name].as<std::string>();
+    }
+    catch(exception ee){
+        return "";
+    }
 }

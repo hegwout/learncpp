@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		94B88E121CCF7BD300B3DB40 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94B88E111CCF7BD300B3DB40 /* main.cpp */; };
+		94B88E191CCFC22B00B3DB40 /* README.md in Sources */ = {isa = PBXBuildFile; fileRef = 94B88E181CCFC22B00B3DB40 /* README.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -25,6 +26,8 @@
 /* Begin PBXFileReference section */
 		94B88E0E1CCF7BD300B3DB40 /* ccoder */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ccoder; sourceTree = BUILT_PRODUCTS_DIR; };
 		94B88E111CCF7BD300B3DB40 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		94B88E181CCFC22B00B3DB40 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		94B88E1A1CD07A7E00B3DB40 /* config.yaml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = config.yaml; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -58,6 +61,8 @@
 			isa = PBXGroup;
 			children = (
 				94B88E111CCF7BD300B3DB40 /* main.cpp */,
+				94B88E181CCFC22B00B3DB40 /* README.md */,
+				94B88E1A1CD07A7E00B3DB40 /* config.yaml */,
 			);
 			path = ccoder;
 			sourceTree = "<group>";
@@ -121,6 +126,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				94B88E191CCFC22B00B3DB40 /* README.md in Sources */,
 				94B88E121CCF7BD300B3DB40 /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -164,6 +170,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				LIBRARY_SEARCH_PATHS = /usr/local/include;
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -172,6 +179,7 @@
 					"-lm",
 					"-lmysqlclient",
 					"-lz",
+					"-lyaml-cpp",
 				);
 				SDKROOT = macosx;
 			};
@@ -207,6 +215,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				LIBRARY_SEARCH_PATHS = /usr/local/include;
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_LDFLAGS = (
@@ -214,6 +223,7 @@
 					"-lm",
 					"-lmysqlclient",
 					"-lz",
+					"-lyaml-cpp",
 				);
 				SDKROOT = macosx;
 			};
