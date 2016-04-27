@@ -31,8 +31,9 @@ using namespace std;
 #include <cppconn/resultset.h>
 #include <cppconn/statement.h>
 #include <boost/date_time.hpp>
-#include <yaml-cpp/yaml.h>
 
+#include <yaml-cpp/yaml.h>
+#include <ctemplate/template.h>
 
 #define EXAMPLE_HOST "localhost"
 #define EXAMPLE_USER "root"
@@ -67,8 +68,22 @@ int main(int argc, const char * argv[]) {
             cout << "\t... say it again, MySQL" << endl;
             cout << "\t....MySQL replies: " << res->getString(1) << endl;
         }
+        ctemplate::TemplateDictionary dict("example");
+        dict.SetValue("Bundle", "Contract");
+        dict.SetValue("Entity", "Billing");
+        
+        std::string output;
+        ctemplate::ExpandTemplate("example.tpl", ctemplate::DO_NOT_STRIP, &dict, &output);
+//        std::cout << output; 
+        ofstream out("Billing.php");
+        if( out.is_open() ){
+            out << output;
+            out.close();
+        }
         
         GenerateEntity("Billing");
+        
+        
         
     } catch (sql::SQLException &e) {
         /*

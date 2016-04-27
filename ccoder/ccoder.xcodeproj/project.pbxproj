@@ -180,6 +180,7 @@
 					"-lmysqlclient",
 					"-lz",
 					"-lyaml-cpp",
+					"-lctemplate_nothreads",
 				);
 				SDKROOT = macosx;
 			};
@@ -224,6 +225,7 @@
 					"-lmysqlclient",
 					"-lz",
 					"-lyaml-cpp",
+					"-lctemplate_nothreads",
 				);
 				SDKROOT = macosx;
 			};
