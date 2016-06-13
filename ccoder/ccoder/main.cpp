@@ -38,7 +38,7 @@ using namespace std;
 #define EXAMPLE_HOST "localhost"
 #define EXAMPLE_USER "root"
 #define EXAMPLE_PASS "mysql"
-#define EXAMPLE_DB "oro_abi"
+#define EXAMPLE_DB "oro_abi_1"
 
 #define CODE_PATH "CODE"
 void GenerateEntity(const string);
