@@ -20,25 +20,71 @@
 #include <map>
 #include <stdexcept>
 
-using namespace std;
-
-
 #include <mysql_connection.h>
 #include <mysql_driver.h>
-#include <cppconn/driver.h>
 
+#include <cppconn/driver.h>
 #include <cppconn/driver.h>
 #include <cppconn/exception.h>
 #include <cppconn/resultset.h>
 #include <cppconn/statement.h>
 #include <boost/date_time.hpp>
-
 #include <yaml-cpp/yaml.h>
 #include <ctemplate/template.h>
 
-
+using namespace std;
 void GenerateEntity(boost::scoped_ptr< sql::Connection >& con);
+void GenerateEntityType(boost::scoped_ptr< sql::Connection >& con);
+
+void GenerateEntityRepository();
+
 std::string YAMLParse( const std::string& name);
+
+std::string TypeToFormType(const std::string &type){
+    string entityType ;
+    if( type.find_first_of('(') > 0 ){
+        entityType = type.substr(0,type.find_first_of('('));
+    }
+    else
+        entityType = type;
+    map<string,string> mapType;
+    mapType.insert(pair<string,string>("tinytext"      , "textarea"));
+    mapType.insert(pair<string,string>("mediumtext"    , "textarea"));
+    mapType.insert(pair<string,string>("longtext"      , "textarea"));
+    mapType.insert(pair<string,string>("text"          , "textarea"));
+    mapType.insert(pair<string,string>("varchar"       , "text"));
+    mapType.insert(pair<string,string>("string"        , "text"));
+    mapType.insert(pair<string,string>("char"          , "text"));
+    mapType.insert(pair<string,string>("date"          , "oro_date"));
+    mapType.insert(pair<string,string>("datetime"      , "oro_datetime"));
+    mapType.insert(pair<string,string>("timestamp"     , "oro_datetime"));
+    mapType.insert(pair<string,string>("time"          , "oro_datetime"));
+    mapType.insert(pair<string,string>("tinyint"       , "choice"));
+    mapType.insert(pair<string,string>("smallint"      , "integer"));
+    mapType.insert(pair<string,string>("mediumint"     , "integer"));
+    mapType.insert(pair<string,string>("int"           , "integer"));
+    mapType.insert(pair<string,string>("integer"       , "integer"));
+    mapType.insert(pair<string,string>("bigint"        , "integer"));
+    mapType.insert(pair<string,string>("float"         , "number"));
+    mapType.insert(pair<string,string>("double"        , "number"));
+    mapType.insert(pair<string,string>("real"          , "number"));
+    mapType.insert(pair<string,string>("decimal"       , "number"));
+    mapType.insert(pair<string,string>("numeric"       , "number"));
+    //以下为设置
+    mapType.insert(pair<string,string>("year"          , "date"));
+    mapType.insert(pair<string,string>("longblob"      , "blob"));
+    mapType.insert(pair<string,string>("blob"          , "blob"));
+    mapType.insert(pair<string,string>("mediumblob"    , "blob"));
+    mapType.insert(pair<string,string>("tinyblob"      , "blob"));
+    mapType.insert(pair<string,string>("binary"        , "blob"));
+    mapType.insert(pair<string,string>("varbinary"     , "blob"));
+    mapType.insert(pair<string,string>("set"           , "simple_array"));
+    map<string,string>::iterator it = mapType.find(entityType);
+    if( it != mapType.end() )
+        return it->second;
+    throw "There is no map form type: " + type;
+}
+
 std::string TypeToEntityType(const std::string &type){
     string entityType ;
     if( type.find_first_of('(') > 0 ){
@@ -106,7 +152,8 @@ int main(int argc, const char * argv[]) {
         boost::scoped_ptr< sql::Connection > con(driver->connect(YAMLParse("db_host"), YAMLParse("db_user"), YAMLParse("db_pass")));
         con->setSchema(YAMLParse("db_name"));
         GenerateEntity(con);
-        
+        GenerateEntityRepository();
+        GenerateEntityType(con);
         
         
     } catch (sql::SQLException &e) {
@@ -132,6 +179,26 @@ int main(int argc, const char * argv[]) {
     cout << endl;
     return EXIT_SUCCESS;
 }
+
+void GenerateEntityRepository(){
+    
+    ctemplate::TemplateDictionary dictionary("entityRespository");
+    string entity(YAMLParse("entity"));
+    string bundle(YAMLParse("bundle"));
+    string tableName(YAMLParse("table_name"));
+    dictionary.SetValue("TableName", tableName);
+    dictionary.SetValue("Bundle", bundle);
+    dictionary.SetValue("Entity", entity);
+    std::string output;
+    ctemplate::ExpandTemplate("entityRepository.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    
+    ofstream out(entity + "Repository.php");
+    if( out.is_open() ){
+        out << output;
+        out.close();
+    }
+}
+
 void GenerateEntity(boost::scoped_ptr< sql::Connection > &con){
     
     boost::scoped_ptr< sql::Statement > stmt(con->createStatement());
@@ -170,8 +237,54 @@ void GenerateEntity(boost::scoped_ptr< sql::Connection > &con){
         out << output;
         out.close();
     }
-
+}
+void GenerateEntityType(boost::scoped_ptr< sql::Connection > &con){
     
+    boost::scoped_ptr< sql::Statement > stmt(con->createStatement());
+    boost::scoped_ptr< sql::ResultSet > res(stmt->executeQuery("SHOW FULL COLUMNS FROM " + YAMLParse("table_name") ));
+    ctemplate::TemplateDictionary dictionary("entity");
+    
+    while (res->next()) {
+        ctemplate::TemplateDictionary *result_dictionary = dictionary.AddSectionDictionary("ONE_RESULT");
+        result_dictionary->ShowSection("FIELD_SECTION");
+        string field = res->getString("Field") ;
+        if( "NO" == res->getString("Null") )
+            result_dictionary->ShowSection("FieldRequiredSection");
+        result_dictionary->SetValue("Field", field);
+        string fieldFormType = TypeToFormType(res->getString("Type")) ;
+        result_dictionary->SetValue("FieldFormType",fieldFormType);
+        
+        string entityField(FieldToEntityField(field)) ;
+        result_dictionary->SetValue("EntityField", entityField);
+        string fieldMethodName (entityField);
+        fieldMethodName[0] = toupper(fieldMethodName[0]);
+        result_dictionary->SetValue("FieldMethodName", fieldMethodName);
+        string key(res->getString("Key"));
+        if( key == "PRI" )
+            result_dictionary->ShowSection("FieldPrimarySection");
+    }
+    string entity(YAMLParse("entity"));
+    string bundle(YAMLParse("bundle"));
+    string tableName(YAMLParse("table_name"));
+    
+    dictionary.SetValue("TableName", tableName);
+    dictionary.SetValue("Bundle", bundle);
+    dictionary.SetValue("Entity", entity);
+    string bundleLower(bundle);
+    bundleLower[0] = tolower(bundle[0]);
+    string entityLower = entity;
+    entityLower[0] = tolower(entity[0]);
+    dictionary.SetValue("BundleLower", bundleLower);
+    dictionary.SetValue("EntityLower", entityLower);
+    
+    std::string output;
+    ctemplate::ExpandTemplate("type.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    
+    ofstream out(entity + "Type.php");
+    if( out.is_open() ){
+        out << output;
+        out.close();
+    }
 }
 
 std::string YAMLParse( const std::string& name){
