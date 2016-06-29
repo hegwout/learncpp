@@ -31,13 +31,21 @@
 #include <boost/date_time.hpp>
 #include <yaml-cpp/yaml.h>
 #include <ctemplate/template.h>
-
+const char* BigParanthesesLeft = "{{";
+const char* BigParanthesesRight= "}}";
 using namespace std;
 void GenerateEntity(boost::scoped_ptr< sql::Connection >& con);
 void GenerateEntityType(boost::scoped_ptr< sql::Connection >& con);
 void GenerateEntityHandler(boost::scoped_ptr< sql::Connection >& con);
 void GenerateEntityMigration(boost::scoped_ptr< sql::Connection >& con);
+void GenerateEntityDatagrid(boost::scoped_ptr< sql::Connection >& con);
+void GenerateEntityMessage(boost::scoped_ptr< sql::Connection >& con);
+void GenerateEntityViewIndex(boost::scoped_ptr< sql::Connection >& con);
+void GenerateEntityViewUpdate(boost::scoped_ptr< sql::Connection >& con);
+void GenerateEntityViewView(boost::scoped_ptr< sql::Connection >& con);
+void GenerateEntityController(boost::scoped_ptr< sql::Connection >& con);
 void GenerateEntityRepository();
+void GenerateEntityAcl();
 
 std::string YAMLParse( const std::string& name);
 
@@ -154,9 +162,16 @@ int main(int argc, const char * argv[]) {
         con->setSchema(YAMLParse("db_name"));
         GenerateEntity(con);
         GenerateEntityRepository();
+        GenerateEntityAcl();
         GenerateEntityType(con);
         GenerateEntityHandler(con);
         GenerateEntityMigration(con);
+        GenerateEntityDatagrid(con);
+        GenerateEntityMessage(con);
+        GenerateEntityViewIndex(con);
+        GenerateEntityViewView(con);
+        GenerateEntityViewUpdate(con);
+        GenerateEntityController(con);
         
     } catch (sql::SQLException &e) {
         /*
@@ -192,7 +207,7 @@ void GenerateEntityRepository(){
     dictionary.SetValue("Bundle", bundle);
     dictionary.SetValue("Entity", entity);
     std::string output;
-    ctemplate::ExpandTemplate("entityRepository.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    ctemplate::ExpandTemplate("entityRepository.php.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
     
     ofstream out(entity + "Repository.php");
     if( out.is_open() ){
@@ -200,6 +215,68 @@ void GenerateEntityRepository(){
         out.close();
     }
 }
+
+void GenerateEntityAcl(){
+    
+    ctemplate::TemplateDictionary dictionary("acl");
+    string entity(YAMLParse("entity"));
+    string bundle(YAMLParse("bundle"));
+    string tableName(YAMLParse("table_name"));
+    dictionary.SetValue("TableName", tableName);
+    dictionary.SetValue("Bundle", bundle);
+    dictionary.SetValue("Entity", entity);
+    string entityLower(entity);
+    entityLower[0] = tolower(entityLower[0]);
+    
+    dictionary.SetValue("lower", entityLower);
+    std::string output;
+    ctemplate::ExpandTemplate("acl.yml.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    
+    ofstream out("acl.yml");
+    if( out.is_open() ){
+        out << output;
+        out.close();
+    }
+}
+
+void GenerateEntityController(boost::scoped_ptr< sql::Connection > &con){
+    
+    boost::scoped_ptr< sql::Statement > stmt(con->createStatement());
+    boost::scoped_ptr< sql::ResultSet > res(stmt->executeQuery("SHOW FULL COLUMNS FROM " + YAMLParse("table_name") ));
+    ctemplate::TemplateDictionary dictionary("controller.php");
+    
+    while (res->next()) {
+        ctemplate::TemplateDictionary *result_dictionary = dictionary.AddSectionDictionary("ONE_RESULT");
+        result_dictionary->ShowSection("FIELD_SECTION");
+        string field = res->getString("Field") ;
+        result_dictionary->SetValue("Field", field);
+        string entityField(FieldToEntityField(field)) ;
+        result_dictionary->SetValue("EntityField", entityField);
+    }
+    string entity(YAMLParse("entity"));
+    string bundle(YAMLParse("bundle"));
+    string tableName(YAMLParse("table_name"));
+    dictionary.SetValue("TableName", tableName);
+    dictionary.SetValue("Bundle", bundle);
+    dictionary.SetValue("Entity", entity);
+    string bundleLower(bundle);
+    bundleLower[0] = tolower(bundle[0]);
+    string entityLower = entity;
+    entityLower[0] = tolower(entity[0]);
+    dictionary.SetValue("BundleLower", bundleLower);
+    dictionary.SetValue("EntityLower", entityLower);
+    
+    
+    std::string output;
+    ctemplate::ExpandTemplate("Controller.php.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    
+    ofstream out(entity + "Controller.php");
+    if( out.is_open() ){
+        out << output;
+        out.close();
+    }
+}
+
 void GenerateEntity(boost::scoped_ptr< sql::Connection > &con){
     
     boost::scoped_ptr< sql::Statement > stmt(con->createStatement());
@@ -231,7 +308,7 @@ void GenerateEntity(boost::scoped_ptr< sql::Connection > &con){
     dictionary.SetValue("Bundle", bundle);
     dictionary.SetValue("Entity", entity);
     std::string output;
-    ctemplate::ExpandTemplate("entity.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    ctemplate::ExpandTemplate("entity.php.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
     
     ofstream out(entity + ".php");
     if( out.is_open() ){
@@ -302,8 +379,9 @@ void GenerateEntityMigration(boost::scoped_ptr< sql::Connection > &con){
     dictionary.SetValue("TableName", tableName);
     dictionary.SetValue("Bundle", bundle);
     dictionary.SetValue("Entity", entity);
+    
     std::string output;
-    ctemplate::ExpandTemplate("migration.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    ctemplate::ExpandTemplate("migration.php.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
     
     ofstream out("Appcoachs" + bundle + "Bundle.php");
     if( out.is_open() ){
@@ -311,6 +389,267 @@ void GenerateEntityMigration(boost::scoped_ptr< sql::Connection > &con){
         out.close();
     }
 }
+
+void GenerateEntityViewIndex(boost::scoped_ptr< sql::Connection > &con){
+    
+    boost::scoped_ptr< sql::Statement > stmt(con->createStatement());
+    boost::scoped_ptr< sql::ResultSet > res(stmt->executeQuery("SHOW FULL COLUMNS FROM " + YAMLParse("table_name") ));
+    ctemplate::TemplateDictionary dictionary("index.html.twig");
+    
+    while (res->next()) {
+        ctemplate::TemplateDictionary *result_dictionary = dictionary.AddSectionDictionary("ONE_RESULT");
+        result_dictionary->ShowSection("FIELD_SECTION");
+        string field = res->getString("Field") ;
+        result_dictionary->SetValue("Field", field);
+        
+    }
+    string entity(YAMLParse("entity"));
+    string bundle(YAMLParse("bundle"));
+    
+    dictionary.SetValue("Bundle", bundle);
+    dictionary.SetValue("Entity", entity);
+    
+    string bundleLower(bundle);
+    bundleLower[0] = tolower(bundle[0]);
+    string entityLower = entity;
+    entityLower[0] = tolower(entity[0]);
+    dictionary.SetValue("BundleLower", bundleLower);
+    dictionary.SetValue("EntityLower", entityLower);
+    dictionary.SetValue("BigParanthesesLeft", BigParanthesesLeft);
+    dictionary.SetValue("BigParanthesesRight", BigParanthesesRight);
+    
+    std::string output;
+    ctemplate::ExpandTemplate("index.html.twig.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    
+    ofstream out("index.html.twig");
+    if( out.is_open() ){
+        out << output;
+        out.close();
+    }
+}
+
+void GenerateEntityViewView(boost::scoped_ptr< sql::Connection > &con){
+    
+    boost::scoped_ptr< sql::Statement > stmt(con->createStatement());
+    boost::scoped_ptr< sql::ResultSet > res(stmt->executeQuery("SHOW FULL COLUMNS FROM " + YAMLParse("table_name") ));
+    ctemplate::TemplateDictionary dictionary("view.html.twig");
+    
+    while (res->next()) {
+        ctemplate::TemplateDictionary *result_dictionary = dictionary.AddSectionDictionary("ONE_RESULT");
+        result_dictionary->ShowSection("FIELD_SECTION");
+        string field = res->getString("Field") ;
+        result_dictionary->SetValue("Field", field);
+        result_dictionary->SetValue("EntityField", FieldToEntityField(field));
+        
+    }
+    string entity(YAMLParse("entity"));
+    string bundle(YAMLParse("bundle"));
+    
+    dictionary.SetValue("Bundle", bundle);
+    dictionary.SetValue("Entity", entity);
+    
+    string bundleLower(bundle);
+    bundleLower[0] = tolower(bundle[0]);
+    string entityLower = entity;
+    entityLower[0] = tolower(entity[0]);
+    dictionary.SetValue("BundleLower", bundleLower);
+    dictionary.SetValue("EntityLower", entityLower);
+    dictionary.SetValue("BigParanthesesLeft", BigParanthesesLeft);
+    dictionary.SetValue("BigParanthesesRight", BigParanthesesRight);
+    
+    std::string output;
+    ctemplate::ExpandTemplate("view.html.twig.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    
+    ofstream out("view.html.twig");
+    if( out.is_open() ){
+        out << output;
+        out.close();
+    }
+}
+void GenerateEntityViewUpdate(boost::scoped_ptr< sql::Connection > &con){
+    
+    boost::scoped_ptr< sql::Statement > stmt(con->createStatement());
+    boost::scoped_ptr< sql::ResultSet > res(stmt->executeQuery("SHOW FULL COLUMNS FROM " + YAMLParse("table_name") ));
+    ctemplate::TemplateDictionary dictionary("update.html.twig");
+    
+    while (res->next()) {
+        ctemplate::TemplateDictionary *result_dictionary = dictionary.AddSectionDictionary("ONE_RESULT");
+        result_dictionary->ShowSection("FIELD_SECTION");
+        string field = res->getString("Field") ;
+        result_dictionary->SetValue("Field", field);
+        result_dictionary->SetValue("EntityField", FieldToEntityField(field));
+        
+    }
+    string entity(YAMLParse("entity"));
+    string bundle(YAMLParse("bundle"));
+    
+    dictionary.SetValue("Bundle", bundle);
+    dictionary.SetValue("Entity", entity);
+    
+    string bundleLower(bundle);
+    bundleLower[0] = tolower(bundle[0]);
+    string entityLower = entity;
+    entityLower[0] = tolower(entity[0]);
+    dictionary.SetValue("BundleLower", bundleLower);
+    dictionary.SetValue("EntityLower", entityLower);
+    dictionary.SetValue("BigParanthesesLeft", BigParanthesesLeft);
+    dictionary.SetValue("BigParanthesesRight", BigParanthesesRight);
+    
+    std::string output;
+    ctemplate::ExpandTemplate("update.html.twig.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    
+    ofstream out("update.html.twig");
+    if( out.is_open() ){
+        out << output;
+        out.close();
+    }
+}
+
+void GenerateEntityMessage(boost::scoped_ptr< sql::Connection > &con){
+    
+    boost::scoped_ptr< sql::Statement > stmt(con->createStatement());
+    boost::scoped_ptr< sql::ResultSet > res(stmt->executeQuery("SHOW FULL COLUMNS FROM " + YAMLParse("table_name") ));
+    ctemplate::TemplateDictionary dictionary("message");
+    
+    while (res->next()) {
+        ctemplate::TemplateDictionary *result_dictionary = dictionary.AddSectionDictionary("ONE_RESULT");
+        result_dictionary->ShowSection("FIELD_SECTION");
+        string field = res->getString("Field") ;
+        result_dictionary->SetValue("Field", field);
+        string label(field);
+        bool nextUpper(false);
+        label[0] = toupper(label[0]);
+        for(string::iterator it = label.begin() ; it != label.end(); it++){
+            if( *it == '_' ){
+                *it = ' ';
+                nextUpper = true;
+            }
+            else if (nextUpper) {
+                *it = toupper(*it);
+                nextUpper = false;
+            }
+        }
+        result_dictionary->SetValue("FieldLabel", label);
+        string entityField(FieldToEntityField(field)) ;
+        result_dictionary->SetValue("EntityField", entityField);
+        
+        
+    }
+    string entity(YAMLParse("entity"));
+    string bundle(YAMLParse("bundle"));
+    
+    dictionary.SetValue("Bundle", bundle);
+    dictionary.SetValue("Entity", entity);
+    
+    string bundleLower(bundle);
+    bundleLower[0] = tolower(bundle[0]);
+    string entityLower = entity;
+    entityLower[0] = tolower(entity[0]);
+    dictionary.SetValue("BundleLower", bundleLower);
+    dictionary.SetValue("EntityLower", entityLower);
+    
+    
+    std::string output;
+    ctemplate::ExpandTemplate("messages_en.yml.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    
+    ofstream out("messages_en.yml");
+    if( out.is_open() ){
+        out << output;
+        out.close();
+    }
+}
+
+
+/**
+ *
+ */
+void GenerateEntityDatagrid(boost::scoped_ptr< sql::Connection > &con){
+    
+    boost::scoped_ptr< sql::Statement > stmt(con->createStatement());
+    boost::scoped_ptr< sql::ResultSet > res(stmt->executeQuery("SHOW FULL COLUMNS FROM " + YAMLParse("table_name") ));
+    ctemplate::TemplateDictionary dictionary("datagrid");
+    
+    while (res->next()) {
+        ctemplate::TemplateDictionary *result_dictionary = dictionary.AddSectionDictionary("ONE_RESULT");
+        result_dictionary->ShowSection("FIELD_SECTION");
+        string field = res->getString("Field") ;
+        string entityFieldType = TypeToEntityType(res->getString("Type")) ;
+        if( entityFieldType == "datetime" || entityFieldType == "date" ){
+            result_dictionary->ShowSection("DATETIME_SECTION");
+        }
+        if( "YES" == res->getString("Null") )
+            result_dictionary->ShowSection("FieldNullSection");
+        result_dictionary->SetValue("Field", field);
+        result_dictionary->SetValue("EntityFieldType", entityFieldType);
+        string entityField(FieldToEntityField(field)) ;
+        result_dictionary->SetValue("EntityField", entityField);
+        
+        string fieldLength;
+        string type(res->getString("Type"));
+        size_t pos = type.find_first_of('(');
+        
+        if( pos != std::string::npos ){
+            fieldLength = type.substr(pos  + 1);
+            fieldLength = fieldLength.substr(0,fieldLength.find_first_of(')'));
+            result_dictionary->ShowSection("FieldLengthSection");
+            string fieldPrecision;
+            if( fieldLength.find_first_of(',') != string::npos ){
+                fieldPrecision = fieldLength.substr(fieldLength.find_first_of(',') + 1);
+                fieldLength = fieldLength.substr(0,fieldLength.find_first_of(','));
+                result_dictionary->ShowSection("FieldPrecisionSection");
+                result_dictionary->SetValue("FieldPrecision", fieldPrecision);
+            }
+            result_dictionary->SetValue("FieldLength", fieldLength);
+        }
+        string fieldMethodName (entityField);
+        fieldMethodName[0] = toupper(fieldMethodName[0]);
+        result_dictionary->SetValue("FieldMethodName", fieldMethodName);
+        string key(res->getString("Key"));
+        if( key == "PRI" )
+            result_dictionary->ShowSection("FieldPrimarySection");
+    }
+    boost::scoped_ptr< sql::Statement > stmt1(con->createStatement());
+    boost::scoped_ptr< sql::ResultSet > res1(stmt->executeQuery("select * from  INFORMATION_SCHEMA.KEY_COLUMN_USAGE where TABLE_NAME = '" + YAMLParse("table_name") +"' and `TABLE_SCHEMA`='" + YAMLParse("db_name") + "' AND `REFERENCED_TABLE_NAME` is not null ; " ));
+    while (res1->next()) {
+        ctemplate::TemplateDictionary *result_dictionary = dictionary.AddSectionDictionary("TWO_RESULT");
+        result_dictionary->ShowSection("FIELD_SECTION");
+        string columnName(res1->getString("COLUMN_NAME"));
+        result_dictionary->SetValue("ColumnName", columnName);
+        string refColumnName(res1->getString("REFERENCED_COLUMN_NAME"));
+        result_dictionary->SetValue("RefColumnName", refColumnName);
+        string refTableName(res1->getString("REFERENCED_TABLE_NAME"));
+        result_dictionary->SetValue("RefTableName", refTableName);
+        
+        result_dictionary->SetValue("RefTableNameAlias", refTableName.substr(0,3));
+        
+    }
+    
+    string entity(YAMLParse("entity"));
+    string bundle(YAMLParse("bundle"));
+    string tableName(YAMLParse("table_name"));
+    dictionary.SetValue("TableName", tableName);
+    dictionary.SetValue("Bundle", bundle);
+    dictionary.SetValue("Entity", entity);
+    
+    string bundleLower(bundle);
+    bundleLower[0] = tolower(bundle[0]);
+    string entityLower = entity;
+    entityLower[0] = tolower(entity[0]);
+    dictionary.SetValue("BundleLower", bundleLower);
+    dictionary.SetValue("EntityLower", entityLower);
+    
+    dictionary.SetValue("EntityAlias", entityLower.substr(0,1));
+
+    std::string output;
+    ctemplate::ExpandTemplate("datagrid.yml.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    
+    ofstream out("datagrid.yml");
+    if( out.is_open() ){
+        out << output;
+        out.close();
+    }
+}
+
 void GenerateEntityType(boost::scoped_ptr< sql::Connection > &con){
     
     boost::scoped_ptr< sql::Statement > stmt(con->createStatement());
@@ -351,7 +690,7 @@ void GenerateEntityType(boost::scoped_ptr< sql::Connection > &con){
     dictionary.SetValue("EntityLower", entityLower);
     
     std::string output;
-    ctemplate::ExpandTemplate("type.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    ctemplate::ExpandTemplate("type.php.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
     
     ofstream out(entity + "Type.php");
     if( out.is_open() ){
@@ -381,7 +720,7 @@ void GenerateEntityHandler(boost::scoped_ptr< sql::Connection > &con){
     dictionary.SetValue("EntityLower", entityLower);
     
     std::string output;
-    ctemplate::ExpandTemplate("handler.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    ctemplate::ExpandTemplate("handler.php.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
     
     ofstream out(entity + "Handler.php");
     //cout << output << endl;
