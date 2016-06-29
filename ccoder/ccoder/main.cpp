@@ -35,14 +35,15 @@
 using namespace std;
 void GenerateEntity(boost::scoped_ptr< sql::Connection >& con);
 void GenerateEntityType(boost::scoped_ptr< sql::Connection >& con);
-
+void GenerateEntityHandler(boost::scoped_ptr< sql::Connection >& con);
+void GenerateEntityMigration(boost::scoped_ptr< sql::Connection >& con);
 void GenerateEntityRepository();
 
 std::string YAMLParse( const std::string& name);
 
 std::string TypeToFormType(const std::string &type){
     string entityType ;
-    if( type.find_first_of('(') > 0 ){
+    if( type.find_first_of('(') != string::npos ){
         entityType = type.substr(0,type.find_first_of('('));
     }
     else
@@ -87,7 +88,7 @@ std::string TypeToFormType(const std::string &type){
 
 std::string TypeToEntityType(const std::string &type){
     string entityType ;
-    if( type.find_first_of('(') > 0 ){
+    if( type.find_first_of('(') != string::npos ){
         entityType = type.substr(0,type.find_first_of('('));
     }
     else
@@ -154,7 +155,8 @@ int main(int argc, const char * argv[]) {
         GenerateEntity(con);
         GenerateEntityRepository();
         GenerateEntityType(con);
-        
+        GenerateEntityHandler(con);
+        GenerateEntityMigration(con);
         
     } catch (sql::SQLException &e) {
         /*
@@ -198,7 +200,6 @@ void GenerateEntityRepository(){
         out.close();
     }
 }
-
 void GenerateEntity(boost::scoped_ptr< sql::Connection > &con){
     
     boost::scoped_ptr< sql::Statement > stmt(con->createStatement());
@@ -233,6 +234,78 @@ void GenerateEntity(boost::scoped_ptr< sql::Connection > &con){
     ctemplate::ExpandTemplate("entity.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
     
     ofstream out(entity + ".php");
+    if( out.is_open() ){
+        out << output;
+        out.close();
+    }
+}
+void GenerateEntityMigration(boost::scoped_ptr< sql::Connection > &con){
+    
+    boost::scoped_ptr< sql::Statement > stmt(con->createStatement());
+    boost::scoped_ptr< sql::ResultSet > res(stmt->executeQuery("SHOW FULL COLUMNS FROM " + YAMLParse("table_name") ));
+    ctemplate::TemplateDictionary dictionary("migration");
+    
+    while (res->next()) {
+        ctemplate::TemplateDictionary *result_dictionary = dictionary.AddSectionDictionary("ONE_RESULT");
+        result_dictionary->ShowSection("FIELD_SECTION");
+        string field = res->getString("Field") ;
+        string entityFieldType = TypeToEntityType(res->getString("Type")) ;
+        if( "YES" == res->getString("Null") )
+            result_dictionary->ShowSection("FieldNullSection");
+        result_dictionary->SetValue("Field", field);
+        result_dictionary->SetValue("EntityFieldType", entityFieldType);
+        string entityField(FieldToEntityField(field)) ;
+        result_dictionary->SetValue("EntityField", entityField);
+        
+        string fieldLength;
+        string type(res->getString("Type"));
+        size_t pos = type.find_first_of('(');
+        
+        if( pos != std::string::npos ){
+            fieldLength = type.substr(pos  + 1);
+            fieldLength = fieldLength.substr(0,fieldLength.find_first_of(')'));
+            //cout << "fieldLength:" << fieldLength << endl;
+            result_dictionary->ShowSection("FieldLengthSection");
+            string fieldPrecision;
+            if( fieldLength.find_first_of(',') != string::npos ){
+                fieldPrecision = fieldLength.substr(fieldLength.find_first_of(',') + 1);
+                fieldLength = fieldLength.substr(0,fieldLength.find_first_of(','));
+                result_dictionary->ShowSection("FieldPrecisionSection");
+                result_dictionary->SetValue("FieldPrecision", fieldPrecision);
+            }
+            result_dictionary->SetValue("FieldLength", fieldLength);
+        }
+        string fieldMethodName (entityField);
+        fieldMethodName[0] = toupper(fieldMethodName[0]);
+        result_dictionary->SetValue("FieldMethodName", fieldMethodName);
+        string key(res->getString("Key"));
+        if( key == "PRI" )
+            result_dictionary->ShowSection("FieldPrimarySection");
+    }
+    boost::scoped_ptr< sql::Statement > stmt1(con->createStatement());
+    boost::scoped_ptr< sql::ResultSet > res1(stmt->executeQuery("select * from  INFORMATION_SCHEMA.KEY_COLUMN_USAGE where TABLE_NAME = '" + YAMLParse("table_name") +"' and `TABLE_SCHEMA`='" + YAMLParse("db_name") + "' AND `REFERENCED_TABLE_NAME` is not null ; " ));
+    while (res1->next()) {
+        ctemplate::TemplateDictionary *result_dictionary = dictionary.AddSectionDictionary("TWO_RESULT");
+        result_dictionary->ShowSection("FIELD_SECTION");
+        string columnName(res1->getString("COLUMN_NAME"));
+        result_dictionary->SetValue("ColumnName", columnName);
+        string refColumnName(res1->getString("REFERENCED_COLUMN_NAME"));
+        result_dictionary->SetValue("RefColumnName", refColumnName);
+        string refTableName(res1->getString("REFERENCED_TABLE_NAME"));
+        result_dictionary->SetValue("RefTableName", refTableName);
+        
+    }
+    
+    string entity(YAMLParse("entity"));
+    string bundle(YAMLParse("bundle"));
+    string tableName(YAMLParse("table_name"));
+    dictionary.SetValue("TableName", tableName);
+    dictionary.SetValue("Bundle", bundle);
+    dictionary.SetValue("Entity", entity);
+    std::string output;
+    ctemplate::ExpandTemplate("migration.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    
+    ofstream out("Appcoachs" + bundle + "Bundle.php");
     if( out.is_open() ){
         out << output;
         out.close();
@@ -281,6 +354,37 @@ void GenerateEntityType(boost::scoped_ptr< sql::Connection > &con){
     ctemplate::ExpandTemplate("type.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
     
     ofstream out(entity + "Type.php");
+    if( out.is_open() ){
+        out << output;
+        out.close();
+    }
+}
+void GenerateEntityHandler(boost::scoped_ptr< sql::Connection > &con){
+    
+    boost::scoped_ptr< sql::Statement > stmt(con->createStatement());
+    boost::scoped_ptr< sql::ResultSet > res(stmt->executeQuery("SHOW FULL COLUMNS FROM " + YAMLParse("table_name") ));
+    ctemplate::TemplateDictionary dictionary("handler");
+    
+    
+    string entity(YAMLParse("entity"));
+    string bundle(YAMLParse("bundle"));
+    string tableName(YAMLParse("table_name"));
+    
+    dictionary.SetValue("TableName", tableName);
+    dictionary.SetValue("Bundle", bundle);
+    dictionary.SetValue("Entity", entity);
+    string bundleLower(bundle);
+    bundleLower[0] = tolower(bundle[0]);
+    string entityLower = entity;
+    entityLower[0] = tolower(entity[0]);
+    dictionary.SetValue("BundleLower", bundleLower);
+    dictionary.SetValue("EntityLower", entityLower);
+    
+    std::string output;
+    ctemplate::ExpandTemplate("handler.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    
+    ofstream out(entity + "Handler.php");
+    //cout << output << endl;
     if( out.is_open() ){
         out << output;
         out.close();
