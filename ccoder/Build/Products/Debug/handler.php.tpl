@@ -122,7 +122,7 @@ class {{Entity}}Handler
             $this->manager->flush();
 
         }catch(\Exception $e){
-            $this->logger->error(sprintf('${{Entity}} error: %s',$e->getMessage()),
+            $this->logger->error(sprintf('{{Entity}} error: %s',$e->getMessage()),
                 ['exception' => $e]);
             $this->session->getFlashBag()->add(
                 'error',

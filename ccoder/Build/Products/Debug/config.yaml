@@ -5,6 +5,6 @@ db_host: 127.0.0.1
 db_user: root
 db_pass: mysql
 db_name: oro_abi_a
-table_name: abi_order
-bundle: Contract
-entity: Order
+table_name: abi_company_bank
+bundle: Biz
+entity: CompanyBank
