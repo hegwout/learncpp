@@ -28,8 +28,5 @@ ccoder/ccoder.xcodeproj/*
 *.exe
 *.out
 *.app
-ccoder/Build/Products/Debug/Billing.php
-ccoder/Build/Products/Debug/ccoder
-ccoder/Build/Products/Debug/Order.php
-ccoder/Build/Products/Debug/OrderRepository.php
-ccoder/Build/Products/Debug/OrderType.php
+ccoder/ccoder/output/*
+ccoder/Build/*

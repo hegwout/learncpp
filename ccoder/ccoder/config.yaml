@@ -3,5 +3,10 @@ password: pass1
 
 db_host: 127.0.0.1
 db_user: root
-db_pass: mysql
-db_name: oro_abi_a
+db_pass: 
+db_name: oro_abi
+table_name: abi_company_bank
+bundle: Biz
+entity: CompanyBank
+template_path: template
+output_path: output

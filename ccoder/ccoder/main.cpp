@@ -8,7 +8,7 @@
 //  NEED:
 //      boost_1_60_0
 //      mysql-connector-c++-1.1.7
-//      https://github.com/OlafvdSpek/ctemplate
+//      https://github.com/OlafvdSpek/ctemplate v2.3
 //      https://github.com/jbeder/yaml-cpp/
 //
 
@@ -48,6 +48,8 @@ void GenerateEntityRepository();
 void GenerateEntityAcl();
 
 std::string YAMLParse( const std::string& name);
+std::string template_path;
+std::string output_path;
 
 std::string TypeToFormType(const std::string &type){
     string entityType ;
@@ -157,8 +159,12 @@ std::string FieldToEntityField(const std::string &field){
 int main(int argc, const char * argv[]) {
     
     try {
+        template_path   = YAMLParse("template_path");
+        output_path     = YAMLParse("output_path");
         sql::Driver * driver = sql::mysql::get_driver_instance();
-        boost::scoped_ptr< sql::Connection > con(driver->connect(YAMLParse("db_host"), YAMLParse("db_user"), YAMLParse("db_pass")));
+        std::string db_pass =YAMLParse("db_pass");
+        std::string db_user =YAMLParse("db_user");
+        boost::scoped_ptr< sql::Connection > con(driver->connect(YAMLParse("db_host"), db_user, db_pass));
         con->setSchema(YAMLParse("db_name"));
         GenerateEntity(con);
         GenerateEntityRepository();
@@ -207,9 +213,9 @@ void GenerateEntityRepository(){
     dictionary.SetValue("Bundle", bundle);
     dictionary.SetValue("Entity", entity);
     std::string output;
-    ctemplate::ExpandTemplate("entityRepository.php.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    ctemplate::ExpandTemplate(template_path + "/entityRepository.php.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
     
-    ofstream out(entity + "Repository.php");
+    ofstream out( output_path + "/" + entity + "Repository.php");
     if( out.is_open() ){
         out << output;
         out.close();
@@ -230,9 +236,9 @@ void GenerateEntityAcl(){
     
     dictionary.SetValue("lower", entityLower);
     std::string output;
-    ctemplate::ExpandTemplate("acl.yml.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    ctemplate::ExpandTemplate( template_path + "/acl.yml.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
     
-    ofstream out("acl.yml");
+    ofstream out(output_path + "/acl.yml");
     if( out.is_open() ){
         out << output;
         out.close();
@@ -268,9 +274,9 @@ void GenerateEntityController(boost::scoped_ptr< sql::Connection > &con){
     
     
     std::string output;
-    ctemplate::ExpandTemplate("Controller.php.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    ctemplate::ExpandTemplate(template_path + "/Controller.php.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
     
-    ofstream out(entity + "Controller.php");
+    ofstream out(output_path + "/" + entity + "Controller.php");
     if( out.is_open() ){
         out << output;
         out.close();
@@ -308,9 +314,9 @@ void GenerateEntity(boost::scoped_ptr< sql::Connection > &con){
     dictionary.SetValue("Bundle", bundle);
     dictionary.SetValue("Entity", entity);
     std::string output;
-    ctemplate::ExpandTemplate("entity.php.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    ctemplate::ExpandTemplate(template_path + "/entity.php.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
     
-    ofstream out(entity + ".php");
+    ofstream out(output_path + "/" + entity + ".php");
     if( out.is_open() ){
         out << output;
         out.close();
@@ -359,7 +365,7 @@ void GenerateEntityMigration(boost::scoped_ptr< sql::Connection > &con){
         if( key == "PRI" )
             result_dictionary->ShowSection("FieldPrimarySection");
     }
-    boost::scoped_ptr< sql::Statement > stmt1(con->createStatement());
+    //foreign key
     boost::scoped_ptr< sql::ResultSet > res1(stmt->executeQuery("select * from  INFORMATION_SCHEMA.KEY_COLUMN_USAGE where TABLE_NAME = '" + YAMLParse("table_name") +"' and `TABLE_SCHEMA`='" + YAMLParse("db_name") + "' AND `REFERENCED_TABLE_NAME` is not null ; " ));
     while (res1->next()) {
         ctemplate::TemplateDictionary *result_dictionary = dictionary.AddSectionDictionary("TWO_RESULT");
@@ -379,11 +385,18 @@ void GenerateEntityMigration(boost::scoped_ptr< sql::Connection > &con){
     dictionary.SetValue("TableName", tableName);
     dictionary.SetValue("Bundle", bundle);
     dictionary.SetValue("Entity", entity);
-    
+    //todo: migeration version
+    std::cout << "SELECT version FROM oro_migrations:" << bundle << endl;
+    boost::scoped_ptr< sql::ResultSet > res2(stmt->executeQuery("SELECT version FROM oro_migrations WHERE bundle='Appcoachs" + bundle + "Bundle' " ));
+    if (res2->next()) {
+        string version = res2->getString("version");
+        std::cout << "bundle  version:" << bundle << " " << version << endl;
+        dictionary.SetValue("version",version.substr(1,version.size()));
+    }
     std::string output;
-    ctemplate::ExpandTemplate("migration.php.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    ctemplate::ExpandTemplate(template_path + "/migration.php.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
     
-    ofstream out("Appcoachs" + bundle + "Bundle.php");
+    ofstream out(output_path + "/Appcoachs" + bundle + "Bundle.php");
     if( out.is_open() ){
         out << output;
         out.close();
@@ -419,9 +432,9 @@ void GenerateEntityViewIndex(boost::scoped_ptr< sql::Connection > &con){
     dictionary.SetValue("BigParanthesesRight", BigParanthesesRight);
     
     std::string output;
-    ctemplate::ExpandTemplate("index.html.twig.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    ctemplate::ExpandTemplate(template_path + "/index.html.twig.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
     
-    ofstream out("index.html.twig");
+    ofstream out(output_path + "/index.html.twig");
     if( out.is_open() ){
         out << output;
         out.close();
@@ -458,9 +471,9 @@ void GenerateEntityViewView(boost::scoped_ptr< sql::Connection > &con){
     dictionary.SetValue("BigParanthesesRight", BigParanthesesRight);
     
     std::string output;
-    ctemplate::ExpandTemplate("view.html.twig.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    ctemplate::ExpandTemplate(template_path + "/view.html.twig.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
     
-    ofstream out("view.html.twig");
+    ofstream out(output_path + "/view.html.twig");
     if( out.is_open() ){
         out << output;
         out.close();
@@ -496,9 +509,9 @@ void GenerateEntityViewUpdate(boost::scoped_ptr< sql::Connection > &con){
     dictionary.SetValue("BigParanthesesRight", BigParanthesesRight);
     
     std::string output;
-    ctemplate::ExpandTemplate("update.html.twig.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    ctemplate::ExpandTemplate(template_path + "/update.html.twig.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
     
-    ofstream out("update.html.twig");
+    ofstream out(output_path + "/update.html.twig");
     if( out.is_open() ){
         out << output;
         out.close();
@@ -550,9 +563,9 @@ void GenerateEntityMessage(boost::scoped_ptr< sql::Connection > &con){
     
     
     std::string output;
-    ctemplate::ExpandTemplate("messages_en.yml.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    ctemplate::ExpandTemplate(template_path + "/messages_en.yml.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
     
-    ofstream out("messages_en.yml");
+    ofstream out(output_path + "/messages_en.yml");
     if( out.is_open() ){
         out << output;
         out.close();
@@ -641,9 +654,9 @@ void GenerateEntityDatagrid(boost::scoped_ptr< sql::Connection > &con){
     dictionary.SetValue("EntityAlias", entityLower.substr(0,1));
 
     std::string output;
-    ctemplate::ExpandTemplate("datagrid.yml.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    ctemplate::ExpandTemplate(template_path + "/datagrid.yml.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
     
-    ofstream out("datagrid.yml");
+    ofstream out(output_path + "/datagrid.yml");
     if( out.is_open() ){
         out << output;
         out.close();
@@ -690,9 +703,9 @@ void GenerateEntityType(boost::scoped_ptr< sql::Connection > &con){
     dictionary.SetValue("EntityLower", entityLower);
     
     std::string output;
-    ctemplate::ExpandTemplate("type.php.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    ctemplate::ExpandTemplate(template_path + "/type.php.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
     
-    ofstream out(entity + "Type.php");
+    ofstream out(output_path + "/" + entity + "Type.php");
     if( out.is_open() ){
         out << output;
         out.close();
@@ -720,9 +733,9 @@ void GenerateEntityHandler(boost::scoped_ptr< sql::Connection > &con){
     dictionary.SetValue("EntityLower", entityLower);
     
     std::string output;
-    ctemplate::ExpandTemplate("handler.php.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
+    ctemplate::ExpandTemplate(template_path + "/handler.php.tpl", ctemplate::DO_NOT_STRIP, &dictionary, &output);
     
-    ofstream out(entity + "Handler.php");
+    ofstream out(output_path + "/" + entity + "Handler.php");
     //cout << output << endl;
     if( out.is_open() ){
         out << output;

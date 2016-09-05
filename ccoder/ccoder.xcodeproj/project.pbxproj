@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		949FB7001D7D44FE0064D3E0 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = 949FB6FF1D7D44FE0064D3E0 /* Makefile */; };
 		94B88E121CCF7BD300B3DB40 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94B88E111CCF7BD300B3DB40 /* main.cpp */; };
 		94B88E191CCFC22B00B3DB40 /* README.md in Sources */ = {isa = PBXBuildFile; fileRef = 94B88E181CCFC22B00B3DB40 /* README.md */; };
 /* End PBXBuildFile section */
@@ -26,6 +27,8 @@
 /* Begin PBXFileReference section */
 		94366C651D22593D00E81E0A /* example.tpl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = example.tpl; sourceTree = "<group>"; };
 		94366C661D225B1C00E81E0A /* Products */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Products; path = Build/Products; sourceTree = "<group>"; };
+		949FB6FF1D7D44FE0064D3E0 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		949FB7011D7D48230064D3E0 /* template */ = {isa = PBXFileReference; lastKnownFileType = folder; path = template; sourceTree = "<group>"; };
 		94B88E0E1CCF7BD300B3DB40 /* ccoder */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ccoder; sourceTree = BUILT_PRODUCTS_DIR; };
 		94B88E111CCF7BD300B3DB40 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		94B88E181CCFC22B00B3DB40 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
@@ -63,6 +66,8 @@
 		94B88E101CCF7BD300B3DB40 /* ccoder */ = {
 			isa = PBXGroup;
 			children = (
+				949FB7011D7D48230064D3E0 /* template */,
+				949FB6FF1D7D44FE0064D3E0 /* Makefile */,
 				94366C651D22593D00E81E0A /* example.tpl */,
 				94B88E111CCF7BD300B3DB40 /* main.cpp */,
 				94B88E181CCFC22B00B3DB40 /* README.md */,
@@ -130,6 +135,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				949FB7001D7D44FE0064D3E0 /* Makefile in Sources */,
 				94B88E191CCFC22B00B3DB40 /* README.md in Sources */,
 				94B88E121CCF7BD300B3DB40 /* main.cpp in Sources */,
 			);

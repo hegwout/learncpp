@@ -1,0 +1,23 @@
+companyBank_index:
+    type: entity
+    class: AppcoachsBizBundle:CompanyBank
+    permission: VIEW
+    group_name: "" 
+
+companyBank_create:
+    type: entity
+    class: AppcoachsBizBundle:CompanyBank
+    permission: CREATE
+    group_name: ""
+
+companyBank_update:
+    type: entity
+    class: AppcoachsBizBundle:CompanyBank
+    permission: EDIT
+    group_name: ""
+
+companyBank_delete:
+    type: entity
+    class: AppcoachsBizBundle:CompanyBank
+    permission: DELETE
+    group_name: ""
